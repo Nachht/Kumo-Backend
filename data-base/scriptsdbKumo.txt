@@ -1,0 +1,211 @@
+USE kumo_db;
+
+
+
+CREATE TABLE usuarios (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    nombres VARCHAR(80) NOT NULL,
+    email VARCHAR(120) NOT NULL UNIQUE,
+    contraseña VARCHAR(255) NOT NULL,
+    celular VARCHAR(20),
+    rol ENUM('cliente', 'admin') DEFAULT 'cliente',
+    fecha_registro DATETIME DEFAULT CURRENT_TIMESTAMP,
+    fecha_ultimo_acceso DATETIME,
+    activo TINYINT(1) DEFAULT 1
+);
+
+
+
+
+CREATE TABLE categorias (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    nombre VARCHAR(50) NOT NULL UNIQUE,
+    activo BOOLEAN DEFAULT TRUE,
+    fecha_registro DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+
+
+CREATE TABLE productos (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    nombre VARCHAR(100) NOT NULL,
+    descripcion TEXT,
+    precio DECIMAL(10, 2) NOT NULL,
+    categoria_id INT,
+    stock INT DEFAULT 0,
+    imagen VARCHAR(255),
+    activo BOOLEAN DEFAULT TRUE,
+    fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (categoria_id) REFERENCES categorias(id) ON DELETE SET NULL
+);
+
+
+CREATE TABLE carrito (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    usuario_id INT NOT NULL,
+    fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP,
+    estado ENUM('activo', 'finalizado') DEFAULT 'activo',
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+);
+
+
+CREATE TABLE carrito_productos (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    carrito_id INT NOT NULL,
+    producto_id INT NOT NULL,
+    cantidad INT DEFAULT 1,
+    precio_unitario DECIMAL(10, 2) NOT NULL,
+    FOREIGN KEY (carrito_id) REFERENCES carrito(id) ON DELETE CASCADE,
+    FOREIGN KEY (producto_id) REFERENCES productos(id) ON DELETE CASCADE
+);
+
+
+CREATE TABLE pedidos (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    usuario_id INT NOT NULL,
+    fecha_pedido DATETIME DEFAULT CURRENT_TIMESTAMP,
+    total DECIMAL(10, 2) NOT NULL,
+    estado ENUM('pendiente', 'confirmado', 'enviado', 'entregado', 'cancelado') DEFAULT 'pendiente',
+    direccion_envio TEXT NOT NULL,
+    metodo_pago VARCHAR(50),
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+);
+
+
+
+
+CREATE TABLE pedido_productos (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    pedido_id INT NOT NULL,
+    producto_id INT NOT NULL,
+    cantidad INT NOT NULL,
+    precio_unitario DECIMAL(10, 2) NOT NULL,
+    FOREIGN KEY (pedido_id) REFERENCES pedidos(id) ON DELETE CASCADE,
+    FOREIGN KEY (producto_id) REFERENCES productos(id) ON DELETE CASCADE
+);
+
+CREATE TABLE contacto (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    nombre VARCHAR(100) NOT NULL,
+    email VARCHAR(100) NOT NULL,
+    telefono VARCHAR(20),
+    asunto VARCHAR(100),
+    mensaje TEXT NOT NULL,
+    fecha DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+
+
+
+INSERT INTO categorias (nombre, activo) VALUES
+('Mangas', 1),
+('Figuras', 1),
+('Merchandising', 1);
+
+
+
+
+INSERT INTO usuarios (nombres, email, contraseña, celular, rol, fecha_ultimo_acceso) VALUES
+('Alexandra Castro', 'alexandra@email.com', '$2y$10$abc123def456ghi789jkl', '3001234567', 'cliente', NOW()),
+('Oscar Yustres', 'oscar@email.com', '$2y$10$def456ghi789jkl012mno', '3002345678', 'cliente', NOW()),
+('Daniel Casas', 'Daniel@email.com', '$2y$10$ghi789jkl012mno345pqr', '3003456789', 'admin', NOW()),
+('Yesmith Sarmiento', 'Yesmith@email.com', '$2y$10$jkl012mno345pqr678stu', '3004567890', 'cliente', NOW())
+
+
+
+
+INSERT INTO productos (nombre, descripcion, precio, categoria_id, stock, imagen) VALUES
+('Naruto - Volumen 1', 'El inicio de la historia de Naruto Uzumaki, un ninja con un sueño: convertirse en Hokage.', 15900.00, 1, 50, 'naruto-vol1.jpg'),
+('One Piece - Volumen 1', 'El comienzo de la gran aventura de Monkey D. Luffy en busca del One Piece.', 16900.00, 1, 45, 'onepiece-vol1.jpg'),
+('Demon Slayer - Volumen 1', 'Tanjiro Kamado comienza su viaje para convertir a su hermana Nezuko en humana nuevamente.', 14900.00, 1, 60, 'demonslayer-vol1.jpg'),
+('Attack on Titan - Volumen 1', 'En un mundo donde los titanes devoran humanos, Eren busca venganza.', 15900.00, 1, 30, 'aot-vol1.jpg'),
+('Jujutsu Kaisen - Volumen 1', 'Yuji Itadori se ve envuelto en el mundo de los hechiceros y las maldiciones.', 16900.00, 1, 55, 'jujutsu-vol1.jpg'),
+('Luffy Gear 5 - Figura 20cm', 'Figura de Monkey D. Luffy en su forma Gear 5, 20cm, edición limitada.', 92000.00, 2, 15, 'luffy-gear5.jpg'),
+('Nezuko - Figura 18cm', 'Figura de Nezuko Kamado, 18cm, con efecto de llamas.', 78000.00, 2, 25, 'nezuko-figura.jpg'),
+('Levi Ackerman - Figura 22cm', 'Figura de Levi de Attack on Titan, 22cm, con su equipo de maniobras.', 89000.00, 2, 18, 'levi-figura.jpg'),
+('Llavero de Jujutsu Kaisen', 'Llavero acrílico de Satoru Gojo, perfecto para tu mochila.', 11000.00, 3, 120, 'llavero-gojo.jpg'),
+('Taza de Attack on Titan', 'Taza de cerámica con el diseño del Cuerpo de Exploración, 350ml.', 25000.00, 3, 90, 'taza-aot.jpg');
+
+
+
+
+
+
+
+INSERT INTO carrito (usuario_id, estado) VALUES
+(1, 'finalizado'),
+(1, 'finalizado'),
+(1, 'activo');
+
+INSERT INTO carrito (usuario_id, estado) VALUES
+(2, 'finalizado'),
+(2, 'finalizado'),
+(2, 'activo');
+
+INSERT INTO carrito (usuario_id, estado) VALUES
+(4, 'finalizado'),
+(4, 'finalizado'),
+(4, 'activo');
+
+INSERT INTO carrito_productos (carrito_id, producto_id, cantidad, precio_unitario) VALUES
+(1, 1, 2, 15900.00),
+(1, 6, 1, 92000.00),
+(2, 3, 1, 14900.00),
+(2, 7, 1, 78000.00),
+(3, 2, 1, 16900.00),
+(3, 8, 1, 89000.00),
+(3, 10, 2, 25000.00);
+
+INSERT INTO carrito_productos (carrito_id, producto_id, cantidad, precio_unitario) VALUES
+(4, 4, 1, 15900.00),
+(4, 6, 1, 92000.00),
+(5, 5, 2, 16900.00),
+(5, 9, 3, 11000.00),
+(6, 1, 1, 15900.00),
+(6, 7, 1, 78000.00),
+(6, 9, 1, 11000.00);
+
+INSERT INTO carrito_productos (carrito_id, producto_id, cantidad, precio_unitario) VALUES
+(7, 1, 1, 15900.00),
+(7, 7, 1, 78000.00),
+(8, 2, 1, 16900.00),
+(8, 6, 1, 92000.00),
+(9, 5, 1, 16900.00),
+(9, 9, 2, 11000.00),
+(9, 10, 1, 25000.00);
+
+INSERT INTO pedidos (usuario_id, total, estado, direccion_envio, metodo_pago) VALUES
+(1, 123800.00, 'entregado', 'Calle 123 #45-67, Bogotá', 'Tarjeta de crédito'),
+(1, 92900.00, 'confirmado', 'Calle 123 #45-67, Bogotá', 'Tarjeta débito');
+
+INSERT INTO pedidos (usuario_id, total, estado, direccion_envio, metodo_pago) VALUES
+(2, 107900.00, 'entregado', 'Carrera 45 #78-90, Medellín', 'Contraentrega'),
+(2, 66800.00, 'pendiente', 'Carrera 45 #78-90, Medellín', 'Tarjeta crédito');
+
+INSERT INTO pedidos (usuario_id, total, estado, direccion_envio, metodo_pago) VALUES
+(4, 93900.00, 'pendiente', 'Calle 89 #56-78, Barranquilla', 'Tarjeta crédito'),
+(4, 108900.00, 'entregado', 'Calle 89 #56-78, Barranquilla', 'Tarjeta débito');
+
+INSERT INTO pedido_productos (pedido_id, producto_id, cantidad, precio_unitario) VALUES
+(1, 1, 2, 15900.00),
+(1, 6, 1, 92000.00);
+
+INSERT INTO pedido_productos (pedido_id, producto_id, cantidad, precio_unitario) VALUES
+(2, 3, 1, 14900.00),
+(2, 7, 1, 78000.00);
+
+INSERT INTO pedido_productos (pedido_id, producto_id, cantidad, precio_unitario) VALUES
+(3, 4, 1, 15900.00),
+(3, 6, 1, 92000.00);
+
+INSERT INTO pedido_productos (pedido_id, producto_id, cantidad, precio_unitario) VALUES
+(4, 5, 2, 16900.00),
+(4, 9, 3, 11000.00);
+
+INSERT INTO pedido_productos (pedido_id, producto_id, cantidad, precio_unitario) VALUES
+(5, 1, 1, 15900.00),
+(5, 7, 1, 78000.00);
+
+INSERT INTO pedido_productos (pedido_id, producto_id, cantidad, precio_unitario) VALUES
+(6, 2, 1, 16900.00),
+(6, 6, 1, 92000.00);
