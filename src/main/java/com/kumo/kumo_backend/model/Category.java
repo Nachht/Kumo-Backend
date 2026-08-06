@@ -3,6 +3,7 @@ package com.kumo.kumo_backend.model;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -28,6 +29,8 @@ public class Category {
     private LocalDateTime fechaRegistro;
 
     // ===== RELACIONES =====
+    // En Category.java, agrega esta anotación para romper el bucle infinito
+    @JsonIgnore
     @OneToMany(mappedBy = "category", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Product> products = new ArrayList<>();
 

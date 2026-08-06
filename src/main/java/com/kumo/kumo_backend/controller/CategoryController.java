@@ -1,68 +1,55 @@
 package com.kumo.kumo_backend.controller;
 
+import com.kumo.kumo_backend.dto.CategoryDTO;
 import com.kumo.kumo_backend.model.Category;
 import com.kumo.kumo_backend.service.CategoryService;
-import org.springframework.http.HttpStatus;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/categories")
+@CrossOrigin(origins = "*")
 public class CategoryController {
 
-    private final CategoryService categoryService;
+    @Autowired
+    private CategoryService categoryService;
 
-    public CategoryController(CategoryService categoryService) {
-        this.categoryService = categoryService;
+    @GetMapping("/public")
+    public ResponseEntity<List<CategoryDTO>> getAllCategories() {
+        List<Category> categories = categoryService.findAll();
+        List<CategoryDTO> categoryDTOs = categories.stream()
+                .map(CategoryDTO::new)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(categoryDTOs);
     }
 
-    // ===== GET /api/categories =====
-    // Listar todas las categorías
-    @GetMapping
-    public ResponseEntity<List<Category>> getAllCategories() {
-        return ResponseEntity.ok(categoryService.findAll());
+    @GetMapping("/public/{id}")
+    public ResponseEntity<CategoryDTO> getCategoryById(@PathVariable Long id) {
+        Category category = categoryService.findById(id);
+        return ResponseEntity.ok(new CategoryDTO(category));
     }
 
-    // ===== GET /api/categories/{id} =====
-    // Obtener categoría por ID
-    @GetMapping("/{id}")
-    public ResponseEntity<Category> getCategoryById(@PathVariable Long id) {
-        return ResponseEntity.ok(categoryService.findById(id));
-    }
-
-    // ===== GET /api/categories/nombre/{nombre} =====
-    // Obtener categoría por nombre
-    @GetMapping("/nombre/{nombre}")
-    public ResponseEntity<Category> getCategoryByNombre(@PathVariable String nombre) {
-        return ResponseEntity.ok(categoryService.findByNombre(nombre));
-    }
-
-    // ===== GET /api/categories/activas =====
-    // Obtener categorías activas
-    @GetMapping("/activas")
-    public ResponseEntity<List<Category>> getActiveCategories() {
-        return ResponseEntity.ok(categoryService.findActiveCategories());
-    }
-
-    // ===== POST /api/categories =====
-    // Crear nueva categoría
     @PostMapping
-    public ResponseEntity<Category> createCategory(@RequestBody Category category) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(categoryService.save(category));
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<CategoryDTO> createCategory(@RequestBody Category category) {
+        Category saved = categoryService.save(category);
+        return ResponseEntity.ok(new CategoryDTO(saved));
     }
 
-    // ===== PUT /api/categories/{id} =====
-    // Actualizar categoría
     @PutMapping("/{id}")
-    public ResponseEntity<Category> updateCategory(@PathVariable Long id, @RequestBody Category category) {
-        return ResponseEntity.ok(categoryService.update(id, category));
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<CategoryDTO> updateCategory(@PathVariable Long id, @RequestBody Category category) {
+        Category updated = categoryService.update(id, category);
+        return ResponseEntity.ok(new CategoryDTO(updated));
     }
 
-    // ===== DELETE /api/categories/{id} =====
-    // Eliminar categoría
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deleteCategory(@PathVariable Long id) {
         categoryService.deleteById(id);
         return ResponseEntity.noContent().build();

@@ -1,81 +1,93 @@
 package com.kumo.kumo_backend.controller;
 
-// ❌ ELIMINA ESTE IMPORT
-// import com.kumo.kumo_backend.enums.Role;
-
 import com.kumo.kumo_backend.model.User;
 import com.kumo.kumo_backend.service.UserService;
-import org.springframework.http.HttpStatus;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/users")
+@CrossOrigin(origins = "*")
 public class UserController {
 
-    private final UserService userService;
+    @Autowired
+    private UserService userService;
 
-    public UserController(UserService userService) {
-        this.userService = userService;
+    // ============================================
+    // CLIENTE - Gestion de su propia cuenta
+    // ============================================
+
+    @GetMapping("/me")
+    @PreAuthorize("hasRole('CLIENTE') or hasRole('ADMIN')")
+    public ResponseEntity<User> getMyProfile() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String email = auth.getName();
+        return userService.findByEmail(email)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
+    @PutMapping("/me")
+    @PreAuthorize("hasRole('CLIENTE') or hasRole('ADMIN')")
+    public ResponseEntity<User> updateMyProfile(@RequestBody User userUpdates) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String email = auth.getName();
+        User updated = userService.updateUserProfile(email, userUpdates);  // ✅ CORREGIDO
+        return ResponseEntity.ok(updated);
+    }
+
+    @PutMapping("/me/password")
+    @PreAuthorize("hasRole('CLIENTE') or hasRole('ADMIN')")
+    public ResponseEntity<?> changePassword(@RequestParam String oldPassword,
+                                            @RequestParam String newPassword) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String email = auth.getName();
+        userService.changePassword(email, oldPassword, newPassword);
+        return ResponseEntity.ok("Contraseña actualizada correctamente");
+    }
+
+    // ============================================
+    // ADMIN - Gestion de todos los usuarios
+    // ============================================
+
     @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<User>> getAllUsers() {
-        return ResponseEntity.ok(userService.findAll());
+        return ResponseEntity.ok(userService.getAllUsers());  // ✅ CORREGIDO
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<User> getUserById(@PathVariable Long id) {
-        return ResponseEntity.ok(userService.findById(id));
+        return userService.getUserById(id)  // ✅ USAR getUserById
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
-    @GetMapping("/email/{email}")
-    public ResponseEntity<User> getUserByEmail(@PathVariable String email) {
-        return ResponseEntity.ok(userService.findByEmail(email));
-    }
-
-    // 🔥 CAMBIADO: de Role a String
-    @GetMapping("/rol/{rol}")
-    public ResponseEntity<List<User>> getUsersByRol(@PathVariable String rol) {
-        return ResponseEntity.ok(userService.findByRol(rol));
-    }
-
-    @GetMapping("/activos")
-    public ResponseEntity<List<User>> getActiveUsers() {
-        return ResponseEntity.ok(userService.findActiveUsers());
-    }
-
-    @PostMapping("/registro")
-    public ResponseEntity<User> registerUser(@RequestBody User user) {
-        User newUser = userService.register(user);
-        return ResponseEntity.status(HttpStatus.CREATED).body(newUser);
-    }
-
-    @PutMapping("/{id}")
-    public ResponseEntity<User> updateUser(@PathVariable Long id, @RequestBody User user) {
-        return ResponseEntity.ok(userService.update(id, user));
+    @PutMapping("/{id}/rol")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<User> changeUserRole(@PathVariable Long id, @RequestParam String rol) {
+        User updated = userService.changeUserRole(id, rol);  // ✅ CORREGIDO
+        return ResponseEntity.ok(updated);
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
-        userService.deleteById(id);
+        userService.deleteUser(id);  // ✅ CORREGIDO
         return ResponseEntity.noContent().build();
     }
 
-    @PatchMapping("/{id}/activar")
-    public ResponseEntity<User> activateUser(@PathVariable Long id) {
-        return ResponseEntity.ok(userService.activate(id));
-    }
-
-    @PatchMapping("/{id}/desactivar")
-    public ResponseEntity<User> deactivateUser(@PathVariable Long id) {
-        return ResponseEntity.ok(userService.deactivate(id));
-    }
-
-    @PatchMapping("/{id}/last-access")
-    public ResponseEntity<User> updateLastAccess(@PathVariable Long id) {
-        return ResponseEntity.ok(userService.updateLastAccess(id));
+    @PutMapping("/{id}/activo")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<User> toggleUserActive(@PathVariable Long id, @RequestParam Boolean activo) {
+        User updated = userService.toggleUserActive(id, activo);  // ✅ AGREGAR NUEVO MÉTODO
+        return ResponseEntity.ok(updated);
     }
 }

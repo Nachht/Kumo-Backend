@@ -1,8 +1,5 @@
 package com.kumo.kumo_backend.repository;
 
-// ❌ ELIMINA ESTE IMPORT
-// import com.kumo.kumo_backend.enums.Role;
-
 import com.kumo.kumo_backend.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
@@ -15,9 +12,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     Optional<User> findByEmail(String email);
 
-    List<User> findByNamesContainingIgnoreCase(String names);
+    // ✅ CORREGIDO: 'nombre' en lugar de 'names'
+    List<User> findByNombreContainingIgnoreCase(String nombre);
 
-    // 🔥 CAMBIADO: de Role a String
     List<User> findByRol(String rol);
 
     List<User> findByActivoTrue();

@@ -30,7 +30,7 @@ public class Order {
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal total;
 
-    // 🔥 CAMBIADO: Ya no usa enum, usa String directamente
+
     @Column(columnDefinition = "VARCHAR(20) DEFAULT 'pendiente'")
     private String estado = "pendiente";
 
