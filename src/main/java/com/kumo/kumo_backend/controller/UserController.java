@@ -3,91 +3,178 @@ package com.kumo.kumo_backend.controller;
 import com.kumo.kumo_backend.model.User;
 import com.kumo.kumo_backend.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/users")
-@CrossOrigin(origins = "*")
 public class UserController {
 
     @Autowired
     private UserService userService;
 
-    // ============================================
-    // CLIENTE - Gestion de su propia cuenta
-    // ============================================
-
-    @GetMapping("/me")
-    @PreAuthorize("hasRole('CLIENTE') or hasRole('ADMIN')")
-    public ResponseEntity<User> getMyProfile() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String email = auth.getName();
-        return userService.findByEmail(email)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
-    }
-
-    @PutMapping("/me")
-    @PreAuthorize("hasRole('CLIENTE') or hasRole('ADMIN')")
-    public ResponseEntity<User> updateMyProfile(@RequestBody User userUpdates) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String email = auth.getName();
-        User updated = userService.updateUserProfile(email, userUpdates);  // ✅ CORREGIDO
-        return ResponseEntity.ok(updated);
-    }
-
-    @PutMapping("/me/password")
-    @PreAuthorize("hasRole('CLIENTE') or hasRole('ADMIN')")
-    public ResponseEntity<?> changePassword(@RequestParam String oldPassword,
-                                            @RequestParam String newPassword) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String email = auth.getName();
-        userService.changePassword(email, oldPassword, newPassword);
-        return ResponseEntity.ok("Contraseña actualizada correctamente");
-    }
-
-    // ============================================
-    // ADMIN - Gestion de todos los usuarios
-    // ============================================
-
+    // ===== GET /api/users (SOLO ADMIN) =====
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<User>> getAllUsers() {
-        return ResponseEntity.ok(userService.getAllUsers());  // ✅ CORREGIDO
+        return ResponseEntity.ok(userService.getAllUsers());
     }
 
+    // ===== GET /api/users/{id} =====
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<User> getUserById(@PathVariable Long id) {
-        return userService.getUserById(id)  // ✅ USAR getUserById
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    @PreAuthorize("hasRole('ADMIN') or hasRole('CLIENTE')")
+    public ResponseEntity<?> getUserById(@PathVariable Long id, Authentication authentication) {
+        try {
+            User user = (User) authentication.getPrincipal();
+            if (!user.getRol().equalsIgnoreCase("ADMIN") && !user.getId().equals(id)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("message", "No tienes permiso para ver este perfil"));
+            }
+
+            User found = userService.getUserById(id)
+                    .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+            if (!user.getRol().equalsIgnoreCase("ADMIN")) {
+                found.setPassword(null);
+            }
+
+            return ResponseEntity.ok(found);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("message", e.getMessage()));
+        }
     }
 
-    @PutMapping("/{id}/rol")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<User> changeUserRole(@PathVariable Long id, @RequestParam String rol) {
-        User updated = userService.changeUserRole(id, rol);  // ✅ CORREGIDO
-        return ResponseEntity.ok(updated);
+    // ===== GET /api/users/email/{email} =====
+    @GetMapping("/email/{email}")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('CLIENTE')")
+    public ResponseEntity<?> getUserByEmail(@PathVariable String email, Authentication authentication) {
+        try {
+            User user = (User) authentication.getPrincipal();
+            User found = userService.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+            if (!user.getRol().equalsIgnoreCase("ADMIN") && !user.getEmail().equals(email)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("message", "No tienes permiso para ver este perfil"));
+            }
+
+            if (!user.getRol().equalsIgnoreCase("ADMIN")) {
+                found.setPassword(null);
+            }
+
+            return ResponseEntity.ok(found);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("message", e.getMessage()));
+        }
     }
 
+    // ===== PUT /api/users/{id} (ACTUALIZAR PERFIL) =====
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('CLIENTE')")
+    public ResponseEntity<?> updateUser(
+            @PathVariable Long id,
+            @RequestBody Map<String, Object> request,
+            Authentication authentication) {
+        try {
+            User user = (User) authentication.getPrincipal();
+
+            if (!user.getRol().equalsIgnoreCase("ADMIN") && !user.getId().equals(id)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("message", "No tienes permiso para editar este perfil"));
+            }
+
+            String nombre = request.containsKey("nombre") ? request.get("nombre").toString() : null;
+            String telefono = request.containsKey("telefono") ? request.get("telefono").toString() : null;
+            String direccion = request.containsKey("direccion") ? request.get("direccion").toString() : null;
+            String rol = request.containsKey("rol") ? request.get("rol").toString() : null;
+            Boolean activo = request.containsKey("activo") ? (Boolean) request.get("activo") : null;
+            String password = request.containsKey("password") ? request.get("password").toString() : null;
+
+            User updated = userService.updateUser(id, nombre, telefono, direccion, rol, activo, password);
+
+            if (!user.getRol().equalsIgnoreCase("ADMIN")) {
+                updated.setPassword(null);
+            }
+
+            return ResponseEntity.ok(updated);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    // ===== PATCH /api/users/{id}/password (CAMBIAR CONTRASEÑA) =====
+    @PatchMapping("/{id}/password")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('CLIENTE')")
+    public ResponseEntity<?> changePassword(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> request,
+            Authentication authentication) {
+        try {
+            User user = (User) authentication.getPrincipal();
+
+            if (!user.getRol().equalsIgnoreCase("ADMIN") && !user.getId().equals(id)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("message", "No tienes permiso para cambiar esta contraseña"));
+            }
+
+            String passwordActual = request.get("passwordActual");
+            String passwordNueva = request.get("passwordNueva");
+            boolean esAdmin = user.getRol().equalsIgnoreCase("ADMIN");
+
+            userService.changePassword(id, passwordActual, passwordNueva, esAdmin);
+
+            return ResponseEntity.ok(Map.of("message", "Contraseña actualizada exitosamente"));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    // ===== PUT /api/users/{id}/role (SOLO ADMIN) =====
+    @PutMapping("/{id}/role")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> changeUserRole(@PathVariable Long id, @RequestParam String rol) {
+        try {
+            User updated = userService.changeUserRole(id, rol);
+            return ResponseEntity.ok(updated);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    // ===== PATCH /api/users/{id}/active (SOLO ADMIN) =====
+    @PatchMapping("/{id}/active")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> toggleUserActive(@PathVariable Long id, @RequestParam Boolean activo) {
+        try {
+            User updated = userService.toggleUserActive(id, activo);
+            return ResponseEntity.ok(updated);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    // ===== DELETE /api/users/{id} (SOLO ADMIN) =====
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
-        userService.deleteUser(id);  // ✅ CORREGIDO
-        return ResponseEntity.noContent().build();
-    }
-
-    @PutMapping("/{id}/activo")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<User> toggleUserActive(@PathVariable Long id, @RequestParam Boolean activo) {
-        User updated = userService.toggleUserActive(id, activo);  // ✅ AGREGAR NUEVO MÉTODO
-        return ResponseEntity.ok(updated);
+    public ResponseEntity<?> deleteUser(@PathVariable Long id) {
+        try {
+            userService.deleteUser(id);
+            return ResponseEntity.noContent().build();
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("message", e.getMessage()));
+        }
     }
 }

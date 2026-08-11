@@ -3,13 +3,10 @@ package com.kumo.kumo_backend.service;
 import com.kumo.kumo_backend.model.User;
 import com.kumo.kumo_backend.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
-
-import java.util.Collections;
 
 @Service
 public class CustomUserDetailsService implements UserDetailsService {
@@ -19,15 +16,16 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+        // 🔥 BUSCAR EL USUARIO EN LA BASE DE DATOS
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado: " + email));
 
-        SimpleGrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + user.getRol().toUpperCase());
+        System.out.println("🔍 CustomUserDetailsService - Usuario encontrado:");
+        System.out.println("   Email: " + user.getEmail());
+        System.out.println("   ID: " + user.getId());
+        System.out.println("   Rol: " + user.getRol());
 
-        return new org.springframework.security.core.userdetails.User(
-                user.getEmail(),
-                user.getPassword(),
-                Collections.singletonList(authority)
-        );
+        // 🔥 DEVOLVER LA ENTIDAD USER DIRECTAMENTE (implementa UserDetails)
+        return user;
     }
 }

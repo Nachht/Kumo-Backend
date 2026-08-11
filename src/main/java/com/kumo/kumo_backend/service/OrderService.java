@@ -28,10 +28,11 @@ public class OrderService {
         this.productRepository = productRepository;
     }
 
-    // ===== LISTAR TODOS LOS PEDIDOS =====
+    // ===== LISTAR TODOS LOS PEDIDOS CON USUARIO =====
     @Transactional(readOnly = true)
     public List<Order> findAll() {
-        return orderRepository.findAll();
+        // 🔥 USAR JOIN FETCH PARA CARGAR EL USUARIO
+        return orderRepository.findAllWithUser();
     }
 
     // ===== BUSCAR PEDIDO POR ID =====
@@ -56,50 +57,71 @@ public class OrderService {
     // ===== CREAR PEDIDO DESDE CARRITO =====
     @Transactional
     public Order createOrderFromCart(Long userId, String direccionEnvio, String metodoPago) {
-        // 1. Verificar que el usuario existe
+        System.out.println("🛒 ===== PROCESANDO COMPRA =====");
+        System.out.println("👤 Usuario ID: " + userId);
+
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado con ID: " + userId));
 
-        // 2. Obtener el carrito activo
         Cart cart = cartRepository.findByUserIdAndEstado(userId, "activo")
                 .orElseThrow(() -> new RuntimeException("No hay carrito activo para el usuario"));
 
-        // 3. Verificar que el carrito no esté vacío
         if (cart.getCartItems().isEmpty()) {
             throw new RuntimeException("El carrito está vacío");
         }
 
-        // 4. Crear el pedido
+        System.out.println("📦 Total de items en carrito: " + cart.getCartItems().size());
+
         Order order = new Order(user, direccionEnvio, metodoPago);
 
-        // 5. Convertir items del carrito a items del pedido
         for (CartItem cartItem : cart.getCartItems()) {
             Product product = cartItem.getProduct();
+            int cantidadComprada = cartItem.getCantidad();
+            int stockActual = product.getStock();
+            int nuevoStock = stockActual - cantidadComprada;
+
+            System.out.println("📦 Producto: " + product.getNombre());
+            System.out.println("   📊 Stock actual: " + stockActual);
+            System.out.println("   🛒 Cantidad comprada: " + cantidadComprada);
+            System.out.println("   📉 Nuevo stock: " + nuevoStock);
 
             // Validar stock
-            if (product.getStock() < cartItem.getCantidad()) {
-                throw new RuntimeException("Stock insuficiente para: " + product.getNombre());
+            if (product.getStock() < cantidadComprada) {
+                throw new RuntimeException("Stock insuficiente para: " + product.getNombre() +
+                        ". Disponible: " + product.getStock() + ", Solicitado: " + cantidadComprada);
             }
 
             // Crear item del pedido
             OrderItem orderItem = new OrderItem(
-                    cartItem.getCantidad(),
+                    cantidadComprada,
                     cartItem.getPrecioUnitario(),
                     order,
                     product
             );
             order.addOrderItem(orderItem);
 
-            // Descontar stock
-            product.setStock(product.getStock() - cartItem.getCantidad());
+            // 🔥 ACTUALIZAR STOCK
+            product.setStock(nuevoStock);
             productRepository.save(product);
+
+            // 🔥 SI EL STOCK LLEGA A 0, DESACTIVAR AUTOMÁTICAMENTE
+            if (nuevoStock <= 0) {
+                product.setActivo(false);
+                product.setStock(0);
+                productRepository.save(product);
+                System.out.println("🔴 Producto '" + product.getNombre() + "' AGOTADO y desactivado");
+
+                // 🔥 OPCIONAL: Disparar evento o notificación (si tienes implementado)
+                // applicationEventPublisher.publishEvent(new ProductAgotadoEvent(product));
+            }
         }
 
-        // 6. Marcar el carrito como finalizado
+        // Marcar carrito como finalizado
         cart.setEstado("finalizado");
         cartRepository.save(cart);
 
-        // 7. Guardar el pedido
+        System.out.println("✅ Compra completada exitosamente. Pedido ID: " + order.getId());
+
         return orderRepository.save(order);
     }
 
@@ -108,7 +130,6 @@ public class OrderService {
     public Order updateOrderStatus(Long orderId, String nuevoEstado) {
         Order order = findById(orderId);
 
-        // Validar transiciones de estado
         String estadoActual = order.getEstado();
         if (estadoActual.equals("entregado") || estadoActual.equals("cancelado")) {
             throw new RuntimeException("No se puede modificar un pedido " + estadoActual);
@@ -127,7 +148,6 @@ public class OrderService {
             throw new RuntimeException("No se puede cancelar un pedido ya entregado");
         }
 
-        // Devolver stock
         for (OrderItem item : order.getOrderItems()) {
             Product product = item.getProduct();
             product.setStock(product.getStock() + item.getCantidad());
@@ -138,7 +158,7 @@ public class OrderService {
         return orderRepository.save(order);
     }
 
-    // ===== ELIMINAR PEDIDO (solo si está pendiente) =====
+    // ===== ELIMINAR PEDIDO =====
     @Transactional
     public void deleteOrder(Long orderId) {
         Order order = findById(orderId);

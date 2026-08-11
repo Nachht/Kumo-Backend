@@ -6,7 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.ProviderManager;  // ✅ IMPORTAR ESTO
+import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -37,34 +37,7 @@ public class SecurityConfig {
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth ->
-                        auth
-                                // Endpoints publicos (sin autenticacion)
-                                .requestMatchers(
-                                        "/auth/**",
-                                        "/api/products/public/**",
-                                        "/api/categories/public/**",
-                                        "/api/public/**",
-                                        "/h2-console/**"
-                                ).permitAll()
-
-                                // Cliente - Compras y cuenta personal
-                                .requestMatchers(
-                                        "/api/orders/**",
-                                        "/api/cart/**",
-                                        "/api/users/me/**"
-                                ).hasRole("CLIENTE")
-
-                                // Admin - Control total
-                                .requestMatchers(
-                                        "/api/admin/**",
-                                        "/api/users/**",
-                                        "/api/products/**",
-                                        "/api/categories/**",
-                                        "/api/orders/all"
-                                ).hasRole("ADMIN")
-
-                                // Cualquier otra cosa requiere autenticacion
-                                .anyRequest().authenticated()
+                        auth.anyRequest().permitAll()  // ⚠️ DESACTIVA SEGURIDAD - SOLO PRUEBAS
                 )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 

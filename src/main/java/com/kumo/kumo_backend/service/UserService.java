@@ -5,6 +5,7 @@ import com.kumo.kumo_backend.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -18,75 +19,97 @@ public class UserService {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
-    // ============================================
-    // CLIENTE
-    // ============================================
-
-    public Optional<User> findByEmail(String email) {
-        return userRepository.findByEmail(email);
-    }
-
-    public User updateUserProfile(String email, User updates) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
-
-        if (updates.getNombre() != null) {
-            user.setNombre(updates.getNombre());
-        }
-        if (updates.getTelefono() != null) {
-            user.setTelefono(updates.getTelefono());
-        }
-        if (updates.getDireccion() != null) {
-            user.setDireccion(updates.getDireccion());
-        }
-
-        return userRepository.save(user);
-    }
-
-    public void changePassword(String email, String oldPassword, String newPassword) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
-
-        if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
-            throw new RuntimeException("Contraseña actual incorrecta");
-        }
-
-        user.setPassword(passwordEncoder.encode(newPassword));
-        userRepository.save(user);
-    }
-
-    // ============================================
-    // ADMIN
-    // ============================================
-
+    // ===== OBTENER TODOS LOS USUARIOS =====
     public List<User> getAllUsers() {
         return userRepository.findAll();
     }
 
-    public Optional<User> getUserById(Long id) {  // ✅ NUEVO MÉTODO
+    // ===== OBTENER USUARIO POR ID =====
+    public Optional<User> getUserById(Long id) {
         return userRepository.findById(id);
     }
 
-    public User changeUserRole(Long userId, String rol) {
-        User user = userRepository.findById(userId)
+    // ===== OBTENER USUARIO POR EMAIL =====
+    public Optional<User> findByEmail(String email) {
+        return userRepository.findByEmail(email);
+    }
+
+    // ===== ACTUALIZAR USUARIO (COMPLETO) =====
+    @Transactional
+    public User updateUser(Long id, String nombre, String telefono, String direccion,
+                           String rol, Boolean activo, String password) {
+        User user = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
-        if (!rol.equals("ADMIN") && !rol.equals("CLIENTE")) {
-            throw new RuntimeException("Rol inválido. Use: ADMIN o CLIENTE");
+        if (nombre != null && !nombre.isEmpty()) {
+            user.setNombre(nombre);
+        }
+        if (telefono != null && !telefono.isEmpty()) {
+            user.setTelefono(telefono);
+        }
+        if (direccion != null && !direccion.isEmpty()) {
+            user.setDireccion(direccion);
+        }
+        if (rol != null && !rol.isEmpty()) {
+            user.setRol(rol);
+        }
+        if (activo != null) {
+            user.setActivo(activo);
+        }
+        if (password != null && !password.isEmpty()) {
+            if (password.length() < 6) {
+                throw new RuntimeException("La contraseña debe tener al menos 6 caracteres");
+            }
+            user.setPassword(passwordEncoder.encode(password));
         }
 
+        return userRepository.save(user);
+    }
+
+    // ===== CAMBIAR CONTRASEÑA =====
+    @Transactional
+    public void changePassword(Long id, String passwordActual, String passwordNueva, boolean esAdmin) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+        // Si no es admin, verificar la contraseña actual
+        if (!esAdmin) {
+            if (passwordActual == null || !passwordEncoder.matches(passwordActual, user.getPassword())) {
+                throw new RuntimeException("Contraseña actual incorrecta");
+            }
+        }
+
+        if (passwordNueva == null || passwordNueva.length() < 6) {
+            throw new RuntimeException("La nueva contraseña debe tener al menos 6 caracteres");
+        }
+
+        user.setPassword(passwordEncoder.encode(passwordNueva));
+        userRepository.save(user);
+    }
+
+    // ===== CAMBIAR ROL =====
+    @Transactional
+    public User changeUserRole(Long id, String rol) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
         user.setRol(rol);
         return userRepository.save(user);
     }
 
-    public User toggleUserActive(Long userId, Boolean activo) {  // ✅ NUEVO MÉTODO
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado con ID: " + userId));
+    // ===== ACTIVAR/DESACTIVAR USUARIO =====
+    @Transactional
+    public User toggleUserActive(Long id, Boolean activo) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
         user.setActivo(activo);
         return userRepository.save(user);
     }
 
-    public void deleteUser(Long userId) {
-        userRepository.deleteById(userId);
+    // ===== ELIMINAR USUARIO =====
+    @Transactional
+    public void deleteUser(Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+        userRepository.delete(user);
     }
 }

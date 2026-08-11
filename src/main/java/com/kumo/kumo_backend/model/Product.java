@@ -40,7 +40,8 @@ public class Product {
     @Column(columnDefinition = "INT DEFAULT 0")
     private Integer stock = 0;
 
-    @Size(max = 255)
+    @Lob
+    @Column(columnDefinition = "LONGTEXT")
     private String imagen;
 
     @Column(columnDefinition = "BOOLEAN DEFAULT TRUE")
@@ -49,16 +50,18 @@ public class Product {
     @Column(name = "fecha_creacion", updatable = false)
     private LocalDateTime fechaCreacion;
 
+    // 🔥 NUEVO: Campo para recibir el nombre de la categoría desde el frontend
+    @Transient
+    private String categoria;
+
     // ===== RELACIONES =====
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "categoria_id")
     private Category category;
 
-
     @JsonIgnore
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<CartItem> cartItems = new ArrayList<>();
-
 
     @JsonIgnore
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
@@ -115,9 +118,16 @@ public class Product {
     public List<OrderItem> getOrderItems() { return orderItems; }
     public void setOrderItems(List<OrderItem> orderItems) { this.orderItems = orderItems; }
 
-    // ===== 🔥 MÉTODOS AUXILIARES (AGREGADOS) =====
+    // 🔥 NUEVO: Getter y Setter para categoria
+    public String getCategoria() {
+        return categoria;
+    }
 
-    // Para CartItem
+    public void setCategoria(String categoria) {
+        this.categoria = categoria;
+    }
+
+    // ===== MÉTODOS AUXILIARES =====
     public void addCartItem(CartItem cartItem) {
         cartItems.add(cartItem);
         cartItem.setProduct(this);
@@ -128,7 +138,6 @@ public class Product {
         cartItem.setProduct(null);
     }
 
-    // Para OrderItem
     public void addOrderItem(OrderItem orderItem) {
         orderItems.add(orderItem);
         orderItem.setProduct(this);

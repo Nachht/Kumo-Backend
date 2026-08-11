@@ -7,6 +7,8 @@ import com.kumo.kumo_backend.repository.ProductRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.math.BigDecimal;
 import java.util.List;
 
@@ -86,6 +88,10 @@ public class ProductService {
             throw new RuntimeException("El precio debe ser mayor a 0");
         }
 
+        // 🔥 FORZAR QUE EL PRODUCTO SE CREE INACTIVO
+        product.setActivo(false);
+        System.out.println("🔴 Producto creado en estado INACTIVO: " + product.getNombre());
+
         return productRepository.save(product);
     }
 
@@ -94,12 +100,14 @@ public class ProductService {
     public Product update(Long id, Product productDetails) {
         Product existingProduct = findById(id);
 
-        // Actualizar campos
+        // Actualizar todos los campos
         existingProduct.setNombre(productDetails.getNombre());
         existingProduct.setDescripcion(productDetails.getDescripcion());
         existingProduct.setPrecio(productDetails.getPrecio());
         existingProduct.setStock(productDetails.getStock());
         existingProduct.setImagen(productDetails.getImagen());
+
+        // ✅ 🔥 ACTUALIZAR ESTADO
         existingProduct.setActivo(productDetails.getActivo());
 
         // Si se cambia la categoría, verificar que existe

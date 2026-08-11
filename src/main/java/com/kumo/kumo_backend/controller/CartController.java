@@ -1,8 +1,14 @@
 package com.kumo.kumo_backend.controller;
 
+import com.kumo.kumo_backend.dto.AddToCartRequestDTO;
+import com.kumo.kumo_backend.dto.CartDTO;
 import com.kumo.kumo_backend.model.Cart;
+import com.kumo.kumo_backend.model.User;
 import com.kumo.kumo_backend.service.CartService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -17,53 +23,102 @@ public class CartController {
         this.cartService = cartService;
     }
 
-    // ===== GET /api/cart/{userId} =====
-    // Obtener el carrito activo de un usuario
-    @GetMapping("/{userId}")
-    public ResponseEntity<Cart> getActiveCart(@PathVariable Long userId) {
-        return ResponseEntity.ok(cartService.findActiveCartByUser(userId));
+    // ===== OBTENER CARRITO DEL USUARIO LOGUEADO =====
+    @GetMapping
+    @PreAuthorize("hasRole('CLIENTE') or hasRole('ADMIN')")
+    public ResponseEntity<CartDTO> getActiveCart(Authentication authentication) {
+        User user = (User) authentication.getPrincipal();
+        Long userId = user.getId();
+        System.out.println("🔍 Obteniendo carrito para userId: " + userId);
+        Cart cart = cartService.findActiveCartByUser(userId);
+        return ResponseEntity.ok(new CartDTO(cart));
     }
 
-    // ===== GET /api/cart/{userId}/total =====
-    // Obtener el total del carrito
-    @GetMapping("/{userId}/total")
-    public ResponseEntity<BigDecimal> getCartTotal(@PathVariable Long userId) {
+    // ===== OBTENER TOTAL DEL CARRITO =====
+    @GetMapping("/total")
+    @PreAuthorize("hasRole('CLIENTE') or hasRole('ADMIN')")
+    public ResponseEntity<BigDecimal> getCartTotal(Authentication authentication) {
+        User user = (User) authentication.getPrincipal();
+        Long userId = user.getId();
         return ResponseEntity.ok(cartService.getCartTotal(userId));
     }
 
-    // ===== POST /api/cart/{userId}/add =====
-    // Agregar producto al carrito
-    @PostMapping("/{userId}/add")
-    public ResponseEntity<Cart> addProductToCart(
-            @PathVariable Long userId,
-            @RequestParam Long productId,
-            @RequestParam(defaultValue = "1") Integer quantity) {
-        return ResponseEntity.ok(cartService.addProductToCart(userId, productId, quantity));
+    // ===== AGREGAR PRODUCTO AL CARRITO =====
+    @PostMapping("/add")
+    @PreAuthorize("hasRole('CLIENTE') or hasRole('ADMIN')")
+    public ResponseEntity<CartDTO> addProductToCart(
+            @RequestBody AddToCartRequestDTO request,
+            Authentication authentication) {
+        try {
+            System.out.println("🔍 ===== RECIBIENDO PETICIÓN /add =====");
+            System.out.println("🔍 Request: " + request);
+
+            // 🔥 OBTENER EL ID DEL USUARIO DEL TOKEN
+            User user = (User) authentication.getPrincipal();
+            Long userId = user.getId();
+
+            System.out.println("🔍 User ID del token: " + userId);
+            System.out.println("🔍 User nombre: " + user.getNombre());
+            System.out.println("🔍 User email: " + user.getEmail());
+            System.out.println("🔍 ProductId del request: " + request.getProductId());
+            System.out.println("🔍 Cantidad del request: " + request.getCantidad());
+
+            if (request.getProductId() == null) {
+                return ResponseEntity.badRequest().build();
+            }
+
+            Integer cantidad = request.getCantidad() != null ? request.getCantidad() : 1;
+            Cart cart = cartService.addProductToCart(userId, request.getProductId(), cantidad);
+            return ResponseEntity.status(HttpStatus.CREATED).body(new CartDTO(cart));
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
     }
 
-    // ===== DELETE /api/cart/{userId}/remove =====
-    // Eliminar producto del carrito
-    @DeleteMapping("/{userId}/remove")
-    public ResponseEntity<Cart> removeProductFromCart(
-            @PathVariable Long userId,
-            @RequestParam Long productId) {
-        return ResponseEntity.ok(cartService.removeProductFromCart(userId, productId));
+    // ===== ELIMINAR PRODUCTO DEL CARRITO =====
+    @DeleteMapping("/remove/{productId}")
+    @PreAuthorize("hasRole('CLIENTE') or hasRole('ADMIN')")
+    public ResponseEntity<CartDTO> removeProductFromCart(
+            @PathVariable Long productId,
+            Authentication authentication) {
+        User user = (User) authentication.getPrincipal();
+        Long userId = user.getId();
+        Cart cart = cartService.removeProductFromCart(userId, productId);
+        return ResponseEntity.ok(new CartDTO(cart));
     }
 
-    // ===== PUT /api/cart/{userId}/update =====
-    // Actualizar cantidad de un producto en el carrito
-    @PutMapping("/{userId}/update")
-    public ResponseEntity<Cart> updateCartItemQuantity(
-            @PathVariable Long userId,
-            @RequestParam Long productId,
-            @RequestParam Integer quantity) {
-        return ResponseEntity.ok(cartService.updateCartItemQuantity(userId, productId, quantity));
+    // ===== ACTUALIZAR CANTIDAD =====
+    @PutMapping("/update")
+    @PreAuthorize("hasRole('CLIENTE') or hasRole('ADMIN')")
+    public ResponseEntity<CartDTO> updateCartItemQuantity(
+            @RequestBody AddToCartRequestDTO request,
+            Authentication authentication) {
+        User user = (User) authentication.getPrincipal();
+        Long userId = user.getId();
+
+        Cart cart = cartService.updateCartItemQuantity(
+                userId,
+                request.getProductId(),
+                request.getCantidad()
+        );
+        return ResponseEntity.ok(new CartDTO(cart));
     }
 
-    // ===== DELETE /api/cart/{userId}/clear =====
-    // Vaciar carrito
-    @DeleteMapping("/{userId}/clear")
-    public ResponseEntity<Cart> clearCart(@PathVariable Long userId) {
-        return ResponseEntity.ok(cartService.clearCart(userId));
+    // ===== VACIAR CARRITO =====
+    @DeleteMapping("/clear")
+    @PreAuthorize("hasRole('CLIENTE') or hasRole('ADMIN')")
+    public ResponseEntity<CartDTO> clearCart(Authentication authentication) {
+        User user = (User) authentication.getPrincipal();
+        Long userId = user.getId();
+        Cart cart = cartService.clearCart(userId);
+        return ResponseEntity.ok(new CartDTO(cart));
+    }
+
+    // ===== CREAR CARRITO (para compatibilidad) =====
+    @PostMapping("/create")
+    public ResponseEntity<Cart> createCart(@RequestParam Long userId) {
+        return ResponseEntity.ok(cartService.createCartForUser(userId));
     }
 }

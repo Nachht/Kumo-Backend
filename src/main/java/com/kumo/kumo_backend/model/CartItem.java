@@ -3,7 +3,6 @@ package com.kumo.kumo_backend.model;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
-
 import java.math.BigDecimal;
 
 @Entity
@@ -14,11 +13,10 @@ public class CartItem {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @NotNull
+    // 🔥 ELIMINAR @NotNull DE ESTOS CAMPOS
     @Column(name = "carrito_id", insertable = false, updatable = false)
     private Long carritoId;
 
-    @NotNull
     @Column(name = "producto_id", insertable = false, updatable = false)
     private Long productoId;
 

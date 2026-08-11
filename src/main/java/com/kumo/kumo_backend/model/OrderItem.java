@@ -49,6 +49,10 @@ public class OrderItem {
         this.precioUnitario = precioUnitario;
         this.order = order;
         this.product = product;
+        // ✅ NO asignar pedidoId aquí - JPA lo hará automáticamente
+        if (product != null) {
+            this.productoId = product.getId();
+        }
     }
 
     // ===== GETTERS Y SETTERS =====
@@ -68,8 +72,24 @@ public class OrderItem {
     public void setPrecioUnitario(BigDecimal precioUnitario) { this.precioUnitario = precioUnitario; }
 
     public Order getOrder() { return order; }
-    public void setOrder(Order order) { this.order = order; }
+    public void setOrder(Order order) {
+        this.order = order;
+        // ✅ NO asignar pedidoId aquí - JPA lo maneja
+    }
 
     public Product getProduct() { return product; }
-    public void setProduct(Product product) { this.product = product; }
+    public void setProduct(Product product) {
+        this.product = product;
+        if (product != null) {
+            this.productoId = product.getId();
+        }
+    }
+
+    @PrePersist
+    protected void onCreate() {
+        // ✅ JPA asignará pedidoId automáticamente desde la relación
+        if (this.order != null && this.pedidoId == null) {
+            this.pedidoId = this.order.getId();
+        }
+    }
 }

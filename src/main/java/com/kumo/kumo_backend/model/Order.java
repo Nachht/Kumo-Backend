@@ -30,7 +30,6 @@ public class Order {
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal total;
 
-
     @Column(columnDefinition = "VARCHAR(20) DEFAULT 'pendiente'")
     private String estado = "pendiente";
 
@@ -54,6 +53,7 @@ public class Order {
 
     public Order(User user, String direccionEnvio, String metodoPago) {
         this.user = user;
+        this.usuarioId = user.getId();  // ✅ ASIGNAR usuarioId
         this.direccionEnvio = direccionEnvio;
         this.metodoPago = metodoPago;
         this.fechaPedido = LocalDateTime.now();
@@ -93,7 +93,6 @@ public class Order {
     public BigDecimal getTotal() { return total; }
     public void setTotal(BigDecimal total) { this.total = total; }
 
-    // 🔥 GETTER Y SETTER para estado (ahora String)
     public String getEstado() { return estado; }
     public void setEstado(String estado) { this.estado = estado; }
 
@@ -104,7 +103,14 @@ public class Order {
     public void setMetodoPago(String metodoPago) { this.metodoPago = metodoPago; }
 
     public User getUser() { return user; }
-    public void setUser(User user) { this.user = user; }
+
+    // ✅ ESTE ES EL SETTER QUE NECESITAS
+    public void setUser(User user) {
+        this.user = user;
+        if (user != null) {
+            this.usuarioId = user.getId();  // ← CLAVE: asigna usuarioId
+        }
+    }
 
     public List<OrderItem> getOrderItems() { return orderItems; }
     public void setOrderItems(List<OrderItem> orderItems) { this.orderItems = orderItems; }
@@ -115,7 +121,7 @@ public class Order {
             fechaPedido = LocalDateTime.now();
         }
         if (estado == null || estado.isEmpty()) {
-            estado = "pendiente";  // ← String por defecto
+            estado = "pendiente";
         }
         if (total == null) {
             total = BigDecimal.ZERO;

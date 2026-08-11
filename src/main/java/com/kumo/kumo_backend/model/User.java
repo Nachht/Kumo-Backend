@@ -3,28 +3,37 @@ package com.kumo.kumo_backend.model;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
+
 import java.time.LocalDateTime;
+import java.util.Collection;
+import java.util.Collections;
 
 @Entity
 @Table(name = "usuarios")
-public class User {  // ← SOLO UNA DECLARACIÓN DE CLASE
+public class User implements UserDetails {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @NotBlank
-    @Column(nullable = false, length = 100)
+    @Column(name = "nombres", nullable = false, length = 100)
     private String nombre;
 
     @NotBlank
     @Email
-    @Column(unique = true, nullable = false, length = 100)
+    @Column(name = "email", unique = true, nullable = false, length = 100)
     private String email;
 
     @NotBlank
-    @Column(nullable = false)
+    @Column(name = "contraseña", nullable = false)
     private String password;
+
+    @Column(name = "celular", length = 20)
+    private String telefono;
 
     @Column(name = "rol", columnDefinition = "VARCHAR(20) DEFAULT 'CLIENTE'")
     private String rol = "CLIENTE";
@@ -32,8 +41,8 @@ public class User {  // ← SOLO UNA DECLARACIÓN DE CLASE
     @Column(name = "fecha_registro", updatable = false)
     private LocalDateTime fechaRegistro;
 
-    @Column(name = "telefono", length = 20)
-    private String telefono;
+    @Column(name = "fecha_ultimo_acceso")
+    private LocalDateTime fechaUltimoAcceso;
 
     @Column(name = "direccion")
     private String direccion;
@@ -86,6 +95,14 @@ public class User {  // ← SOLO UNA DECLARACIÓN DE CLASE
         this.password = password;
     }
 
+    public String getTelefono() {
+        return telefono;
+    }
+
+    public void setTelefono(String telefono) {
+        this.telefono = telefono;
+    }
+
     public String getRol() {
         return rol;
     }
@@ -102,12 +119,12 @@ public class User {  // ← SOLO UNA DECLARACIÓN DE CLASE
         this.fechaRegistro = fechaRegistro;
     }
 
-    public String getTelefono() {
-        return telefono;
+    public LocalDateTime getFechaUltimoAcceso() {
+        return fechaUltimoAcceso;
     }
 
-    public void setTelefono(String telefono) {
-        this.telefono = telefono;
+    public void setFechaUltimoAcceso(LocalDateTime fechaUltimoAcceso) {
+        this.fechaUltimoAcceso = fechaUltimoAcceso;
     }
 
     public String getDireccion() {
@@ -125,4 +142,37 @@ public class User {  // ← SOLO UNA DECLARACIÓN DE CLASE
     public void setActivo(Boolean activo) {
         this.activo = activo;
     }
-} // ← FIN DE LA CLASE (SOLO UNO)
+
+    // ===== MÉTODOS DE UserDetails =====
+    @Override
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        return Collections.singletonList(
+                new SimpleGrantedAuthority("ROLE_" + (rol != null ? rol.toUpperCase() : "USER"))
+        );
+    }
+
+    @Override
+    public String getUsername() {
+        return email;
+    }
+
+    @Override
+    public boolean isAccountNonExpired() {
+        return true;
+    }
+
+    @Override
+    public boolean isAccountNonLocked() {
+        return true;
+    }
+
+    @Override
+    public boolean isCredentialsNonExpired() {
+        return true;
+    }
+
+    @Override
+    public boolean isEnabled() {
+        return activo != null ? activo : true;
+    }
+}

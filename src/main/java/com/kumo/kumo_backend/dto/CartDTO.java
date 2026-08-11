@@ -1,6 +1,7 @@
 package com.kumo.kumo_backend.dto;
 
 import com.kumo.kumo_backend.model.Cart;
+import com.kumo.kumo_backend.model.CartItem;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -19,8 +20,12 @@ public class CartDTO {
     public CartDTO(Cart cart) {
         this.id = cart.getId();
         this.estado = cart.getEstado();
-        this.total = cart.getTotal();
         this.fechaCreacion = cart.getFechaCreacion();
+
+        // 🔥 CALCULAR EL TOTAL MANUALMENTE
+        this.total = cart.getCartItems().stream()
+                .map(item -> item.getPrecioUnitario().multiply(BigDecimal.valueOf(item.getCantidad())))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         if (cart.getUser() != null) {
             this.user = new UserDTO(cart.getUser());
