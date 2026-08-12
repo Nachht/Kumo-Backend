@@ -3,6 +3,7 @@ package com.kumo.kumo_backend.controller;
 import com.kumo.kumo_backend.dto.CategoryDTO;
 import com.kumo.kumo_backend.model.Category;
 import com.kumo.kumo_backend.service.CategoryService;
+import io.swagger.v3.oas.annotations.Hidden;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -49,6 +50,7 @@ public class CategoryController {
     }
 
     @DeleteMapping("/{id}")
+    @Hidden
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deleteCategory(@PathVariable Long id) {
         categoryService.deleteById(id);

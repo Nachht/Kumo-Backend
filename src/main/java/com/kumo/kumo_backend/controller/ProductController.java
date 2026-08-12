@@ -4,6 +4,7 @@ import com.kumo.kumo_backend.model.Category;
 import com.kumo.kumo_backend.model.Product;
 import com.kumo.kumo_backend.service.CategoryService;
 import com.kumo.kumo_backend.service.ProductService;
+import io.swagger.v3.oas.annotations.Hidden;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -161,6 +162,7 @@ public class ProductController {
     }
 
     @DeleteMapping("/{id}")
+    @Hidden
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deleteProduct(@PathVariable Long id) {
         try {

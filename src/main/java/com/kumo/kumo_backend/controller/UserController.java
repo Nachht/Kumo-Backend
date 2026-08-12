@@ -2,6 +2,7 @@ package com.kumo.kumo_backend.controller;
 
 import com.kumo.kumo_backend.model.User;
 import com.kumo.kumo_backend.service.UserService;
+import io.swagger.v3.oas.annotations.Hidden;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -167,6 +168,7 @@ public class UserController {
 
     // ===== DELETE /api/users/{id} (SOLO ADMIN) =====
     @DeleteMapping("/{id}")
+    @Hidden
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> deleteUser(@PathVariable Long id) {
         try {

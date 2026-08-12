@@ -2,6 +2,7 @@ package com.kumo.kumo_backend.controller;
 
 import com.kumo.kumo_backend.model.Contact;
 import com.kumo.kumo_backend.service.ContactService;
+import io.swagger.v3.oas.annotations.Hidden;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -37,6 +38,7 @@ public class ContactController {
 
     // 🔒 ADMIN - Solo administradores pueden eliminar mensajes
     @DeleteMapping("/{id}")
+    @Hidden
     public ResponseEntity<Void> deleteMessage(@PathVariable Long id) {
         contactService.deleteById(id);
         return ResponseEntity.noContent().build();
