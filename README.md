@@ -103,8 +103,7 @@ Kumo utiliza **SpringDoc OpenAPI** para generar documentación interactiva de la
 | **Daniel Steven Casas Pulido** | [@Nachht](https://github.com/Nachht) |
 | **Oscar Daniel Yustres Castro** | [@oscaryustres](https://github.com/oscaryustres) |
 | **Yenny Alexandra Castro** | [@YenCastro](https://github.com/YenCastro) |
-| **Yesmith Adriana Sarmiento Suarez** | [@yesmithsarmiento](https://github.com/yesmithsarmiento
-) |
+| **Yesmith Adriana Sarmiento Suarez** | [@yesmithsarmiento](https://github.com/yesmithsarmiento) |
 
 ---
 
